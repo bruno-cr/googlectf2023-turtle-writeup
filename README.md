@@ -333,7 +333,7 @@ Resultado da execução completa: correct
 Tempo: 0.15s
 
 [SUCESSO] A flag reconstruída foi ACEITA pelo programa original,
-rodando de ponta a ponta (não é só uma extração estática de arrays).
+rodando de ponta a ponta.
 ```
 
 ---
