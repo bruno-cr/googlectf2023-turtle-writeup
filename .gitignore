@@ -1,0 +1,21 @@
+# Ambiente virtual Python (criado dentro de solver/, mas os padroes
+# abaixo pegam em qualquer nivel de pasta -- nao precisa "solver/" na frente)
+venv/
+.venv/
+env/
+
+# Cache/bytecode do Python (gerado automaticamente dentro de solver/
+# sempre que o resolve_turtle.py roda)
+__pycache__/
+*.pyc
+*.pyo
+
+# Copias automaticas de c.png/m.png dentro de solver/ -- o
+# resolve_turtle.py copia esses arquivos de challenge/ na hora,
+# entao nao precisam (e nao devem) ser commitados duas vezes
+solver/c.png
+solver/m.png
+
+# Arquivos de SO/editor comuns
+.DS_Store
+*.swp
