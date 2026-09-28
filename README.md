@@ -1,8 +1,6 @@
-# Google CTF 2023 — Turtle (Reverse Engineering)
+# Google CTF 2023 - Turtle (Reverse Engineering)
 
-Write-up e reprodução do desafio **Turtle**, categoria Reverse
-Engineering do Google CTF 2023, desenvolvido como avaliação (E3) da
-disciplina **Segurança Cibernética (CCO-04.2.01)** — PPGCC, UFSCar.
+Write-up e reprodução do desafio **Turtle**, categoria Reverse Engineering do Google CTF 2023, desenvolvido como avaliação (E3) da disciplina **Segurança Cibernética (CCO-04.2.01)**, PPGCC, UFSCar.
 
 ## Membros do grupo
 
@@ -19,24 +17,46 @@ disciplina **Segurança Cibernética (CCO-04.2.01)** — PPGCC, UFSCar.
 
 ## 1. Identificação do desafio e objetivo
 
-**Turtle** entrega três arquivos:
+O desafio **Turtle** entrega três arquivos originais:
 
-- `turt.py` — um script Python que usa a biblioteca **Turtle
-  Graphics** (normalmente usada para desenhar formas simples) de um
-  jeito não convencional: a "tartaruga" se comporta como uma **CPU**.
-- `c.png` — uma imagem de **9×83 pixels** que codifica o *código* do
-  programa: cada trinca de pixels numa linha é uma instrução.
-- `m.png` — uma imagem de **25×21 pixels** que codifica a *memória*
-  inicial do programa.
+- `turt.py`: um script em Python que utiliza a biblioteca gráfica **Turtle** e a tela de desenho (canvas) do Tkinter de um modo incomum, onde a tartaruga atua diretamente como uma **CPU**.
+- `c.png`: uma imagem de **9 x 83 pixels** que codifica o **código** do programa, onde cada trinca de pixels em uma linha representa uma instrução.
+- `m.png`: uma imagem de **25 x 21 pixels** que codifica a **memória inicial** da máquina, contendo a tabela de permutação e os resultados esperados das comparações.
 
-**A ideia central:** `turt.py` não é o "programa" em si — é o
-**hardware** (a CPU). O programa de verdade (a lógica que decide se
-uma flag está certa) está **codificado como cores de pixels** dentro
-de `c.png`. A tartaruga percorre esses pixels, interpreta cada trinca
-como uma instrução (opcode + 2 operandos), e executa.
+### 1.1 Contexto e mecânica central
 
-**Objetivo:** descobrir qual sequência de 35 caracteres faz o
-programa imprimir `"correct flag!"` em vez de `"wrong flag :C"`.
+Em competições de segurança, este tipo de desafio é conhecido como um **crackme**: um programa criado de propósito como um quebra-cabeça. Ele recebe uma senha ou chave secreta (chamada de *flag*) e cabe a quem analisa descobrir a entrada correta investigando a lógica interna do executável, sem ter acesso ao código-fonte em linguagem de alto nível.
+
+Muitos desafios de engenharia reversa usam máquinas virtuais (VMs proprietárias). Neles, o programa roda sobre um processador simulado em software. Em qualquer processador, uma instrução é dividida em duas partes básicas:
+- O **opcode** (*operation code*, código de operação): representa a ação a ser executada, como somar, copiar ou comparar (o verbo da instrução).
+- Os **operandos**: indicam sobre quais dados a ação atua, como o registrador que receberá o valor ou o número a ser somado (os objetos da instrução).
+
+Normalmente, opcodes e operandos ficam guardados como vetores de bytes na memória RAM. No **Turtle**, código, dados e representação visual se fundem no mesmo espaço gráfico:
+
+```
+                  ┌────────────────────────────────────────┐
+                  │          Canvas Tkinter (GUI)          │
+                  │                                        │
+┌──────────────┐  │  ┌──────────┐  ┌─────────┐  ┌───────┐  │
+│    c.png     │──┼─►│  cTurt   │  │  mTurt  │  │ rTurt │  │
+│ (Instruções) │  │  │(Programa)│  │(Memória)│  │(Regs) │  │
+└──────────────┘  │  └──────────┘  └─────────┘  └───────┘  │
+                  │       ▲             ▲           ▲      │
+┌──────────────┐  │       │             │           │      │
+│    m.png     │──┼───────┴─────────────┼───────────┘      │
+│(Memória/Tab) │  │                     ▼                  │
+└──────────────┘  │               ┌──────────┐             │
+                  │               │  sTurt   │             │
+                  │               │ (Pilha)  │             │
+                  │               └──────────┘             │
+                  └────────────────────────────────────────┘
+```
+
+**A ideia central:** o arquivo `turt.py` não é a lógica do desafio em si, mas sim o **hardware** (a CPU). O programa real está gravado como **cores de pixels** dentro de `c.png`. A tartaruga percorre esses pixels, interpreta cada trinca como uma instrução (opcode mais dois operandos) e executa a operação.
+
+A entrada do usuário (uma cadeia de 35 caracteres) é desenhada pelo script `turt.py` por cima da área inicial da memória visual no canvas. O programa percorre as instruções e, se todas as verificações forem satisfeitas, emite `"correct flag!"` (instrução `WIN`). Se qualquer verificação falhar, emite `"wrong flag :C"` (instrução `LOSE`) e encerra.
+
+**Objetivo:** descobrir qual sequência de 35 caracteres faz o programa imprimir `"correct flag!"` em vez de `"wrong flag :C"`.
 
 ---
 
