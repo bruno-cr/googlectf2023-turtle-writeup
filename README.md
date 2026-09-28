@@ -217,18 +217,10 @@ nessa ordem:
 
 ## 3. Teoria necessária
 
-- **Codificação de instruções em pixels** — a ideia de usar bits de
-  uma cor para multiplexar informação (opcode + flags de operando)
-  é uma técnica clássica de compressão de formato de instrução,
-  parecida com como processadores reais codificam registradores e
-  modos de endereçamento nos bits de uma instrução.
-- **Busca binária** — algoritmo clássico; aqui, invertido: em vez de
-  buscar um valor num array ordenado, usamos os **resultados
-  gravados** de buscas binárias (para candidatos de 43 a 122) como
-  "testemunhas" de quais caracteres pertencem à flag.
-- **Permutações** — o array de reordenação é uma bijeção de 30
-  posições; a mesma ideia matemática de uma "chave de reordenação",
-  sem qualquer criptografia envolvida.
+- **Codificação de instruções em pixels:** usar bits de canais de cor para transportar informação combinada (opcode mais flags de operando) é análogo a como arquiteturas de processadores reais codificam registradores e modos de endereçamento dentro dos bits de uma mesma palavra de instrução.
+- **Busca binária como oráculo determinístico:** em vez de usar o algoritmo apenas para buscar dados em um array, usamos os resultados das comparações já gravadas para identificar quais caracteres pertencem à flag e onde se encontram. Cada comparação reduz o espaço pela metade, rodando em tempo linear $\mathcal{O}(|\Sigma| \cdot \log N)$, onde $|\Sigma|$ é o alfabeto testado e $N$ é o tamanho do vetor.
+- **Permutações:** o array de reordenação é uma bijeção de 30 posições, servindo como uma chave de transposição reversível.
+- **Linguagens esotéricas bidimensionais:** o funcionamento se assemelha a linguagens visuais como **Piet** e **Befunge**, onde as instruções e o fluxo de controle são direcionados pelas coordenadas espaciais em uma matriz visual.
 
 ---
 
