@@ -435,16 +435,21 @@ $$
 ## 5. Teoria necessária
 
 **Codificação de instruções em pixels:** 
+
 O código usa as cores dos pixels para representar instruções. Parte dos bits informa o que fazer (a operação) e outra parte informa como utilizar os dados (os operandos). Isso é semelhante ao funcionamento das instruções de um processador real.
 
 **Busca binária como oráculo determinístico:**
+
 A busca binária não é usada apenas para localizar um valor. Neste caso, os resultados das comparações ajudam a descobrir quais caracteres fazem parte da flag e suas respectivas posições. A cada comparação, metade das possibilidades é eliminada, tornando a busca mais eficiente. Em vez de usar o algoritmo apenas para buscar dados em um array, usamos os resultados das comparações já gravadas para identificar quais caracteres pertencem à flag e onde se encontram. Cada comparação reduz o espaço pela metade, rodando em tempo linear $\mathcal{O}(|\Sigma| \cdot \log N)$, onde $|\Sigma|$ é o alfabeto testado e $N$ é o tamanho do vetor.
 
 **Permutações:**
+
 O array define uma nova ordem para as 30 posições. Essa ordem funciona como uma chave de transposição, pois reorganiza os caracteres e pode ser desfeita para recuperar a sequência original.
 
 **Linguagens esotéricas bidimensionais:**
+
 O programa é organizado em uma estrutura visual, na qual a posição dos elementos influencia a execução. Assim como em linguagens como Piet e Befunge, as instruções e os caminhos que o programa percorre são definidos pelas posições em uma matriz.
+
 ---
 
 ## 6. Ambiente, dependências e decisão de reprodutibilidade
