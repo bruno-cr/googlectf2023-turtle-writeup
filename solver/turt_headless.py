@@ -450,8 +450,8 @@ def run(max_passos=2_000_000):
 
     A TABELA DE CORES -> OPERACOES abaixo (os varios `cmpcolor ==
     (...)`) e exatamente a tabela de opcodes que documentamos, com
-    o processo de redescoberta detalhado, em
-    docs/redescoberta-opcodes.md.
+    o processo de redescoberta detalhado na
+    Seção 2.5 do README.
 
     ADAPTACAO (nao existia no original): em vez de `print(...)` +
     `exit(0)`, devolvemos uma STRING com o resultado -- assim

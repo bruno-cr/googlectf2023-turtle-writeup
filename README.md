@@ -60,162 +60,367 @@ A entrada do usuário (uma cadeia de 35 caracteres) é desenhada pelo script `tu
 
 ---
 
-## 2. A arquitetura (ISA) — visão geral
+## 2. A arquitetura (ISA) - visão geral
 
-### 2.1 — As 4 "tartarugas" (a arquitetura da máquina)
+### 2.1 As 4 tartarugas (a arquitetura da máquina)
 
-| Tartaruga | Papel |
-|---|---|
-| **C** (`cTurt`) | Percorre `c.png`; é o ponteiro de instrução (like um "PC" de CPU) |
-| **M** (`mTurt`) | Memória principal, carregada de `m.png`; a flag testada é sobrescrita nos primeiros 35 endereços |
-| **S** (`sTurt`) | Pilha, **separada** da memória principal |
-| **R** (`rTurt`) | 9 registradores de uso geral, numa grade 3×3 |
+O interpretador `turt.py` cria 4 tartarugas com papéis distintos, distribuídas espacialmente no canvas:
 
-### 2.2 — Como uma instrução é codificada
+```
+  Y (Canvas)
+  ▲
+  │   [cTurt: Código]          [sTurt: Pilha Linear]
+  │   Lê c.png (9x83 px)       Segmento de 120 passos
+  │   Passo: 5 px/instrução    SP desloca cursor para frente/trás
+  │
+  │   [mTurt: Memória 2D]      [rTurt: Registradores 3x3]
+  │   Lê m.png (25x21 px)      9 células com espaçamento de 10 px
+  │   Célula a: (a%25, a//25)  reg_0..reg_5 (dados), reg_6..8 (flags)
+  └─────────────────────────────────────────────────────────────► X (Canvas)
+```
 
-Cada instrução ocupa **3 pixels em sequência, na mesma linha** de
-`c.png`. O primeiro pixel, **mascarado** (`&0xfc` em cada canal),
-identifica o opcode; os 2 bits menos significativos de cada canal
-são *flags* que dizem como interpretar os outros 2 pixels
-(registrador? memória/pilha? constante?).
+| Tartaruga | Papel na CPU | Detalhes de funcionamento |
+|---|---|---|
+| **C** (`cTurt`) | Ponteiro de instrução (*Program Counter* ou PC) | Percorre `c.png` (9 x 83 pixels). Cada instrução tem 3 pixels de largura. Como a largura total é 9, a imagem acomoda 3 colunas de funções independentes. |
+| **M** (`mTurt`) | Memória principal de dados | Grade bidimensional de 25 x 21 = 525 células, com passo de 5 pixels. O endereço `a` fica em $x = (a \bmod 25) \times 5$ e $y = (\lfloor a / 25 \rfloor) \times 5$. A flag testada sobrescreve as primeiras 35 células. |
+| **S** (`sTurt`) | Pilha de execução (*stack*) | Opera em uma linha reta de 120 posições. Uma pilha segue o modelo LIFO (*Last In, First Out*), onde o último dado inserido é o primeiro a sair. O ponteiro de pilha (`SP`, de *Stack Pointer*) é a posição física da tartaruga nessa reta. |
+| **R** (`rTurt`) | Registradores de uso geral | Grade de 3 x 3 células com 9 registradores (`reg_0` a `reg_8`). Registradores são memórias ultra-rápidas usadas para cálculos temporários. `reg_6`, `reg_7` e `reg_8` guardam as flags de comparação (igual, menor e maior). |
 
-### 2.3 — A tabela de opcodes: processo de redescoberta
+### 2.2 Anatomia visual do hardware em execução
 
-`turt.py` não tem nenhum comentário dizendo "esta cor significa
-`mov`" ou "aquela cor significa `add`". A única forma de saber o que
-cada cor faz é **ler a função `run()`** e observar, para cada
-`elif cmpcolor == (...)`, **o que o código faz de fato** quando
-aquela cor aparece — e daí dar um nome (mov, add, cmp, etc.) por
-analogia com instruções de assembly que já conhecemos. Esta seção
-documenta esse processo, para deixar claro que a tabela abaixo
-**não foi copiada de nenhuma fonte externa** — foi redescoberta
-lendo o próprio código-fonte do desafio, e só depois comparada com
-um write-up público como conferência (Seção 11).
+A imagem a seguir apresenta a captura do canvas gráfico do Tkinter durante a execução da CPU Turtle com as quatro tartarugas e os módulos de dados carregados:
 
-**Passo 1 — isolar a estrutura de decisão.** A função `run()` tem
-este formato:
+![Hardware da CPU Turtle](hardware.png)
+
+*Figura 1 — Anatomia visual e mapeamento dos módulos da CPU Turtle em execução. Fonte: Próprio autor, via script de renderização com auxílio de IA generativa.*
+
+Para gerar ou atualizar essa imagem a qualquer momento diretamente a partir dos arquivos do desafio, execute o comando abaixo na raiz do repositório:
+
+```bash
+python3 solver/generate_hardware.py
+```
+
+Na área do canvas à esquerda, as quatro tartarugas ativas aparecem identificadas exclusivamente pelos nomes curtos `(cTurt)`, `(rTurt)`, `(mTurt)` e `(sTurt)`, posicionadas em áreas livres para não sobrepor nenhum traço ou pixel do circuito:
+
+1. **Faixa de Código (`c.png` / `(cTurt)` - Program Counter):**
+   - Faixa vertical contendo 9 colunas de pixels de largura por 83 linhas de instruções.
+   - Cada instrução ocupa uma trinca de pixels horizontais (opcode, destino e fonte). Como a imagem tem 9 pixels de largura, ela abriga 3 colunas de funções que rodam de forma independente: Coluna 0 (Main), Coluna 1 (Sort) e Coluna 2 (BinSearch).
+   - A tartaruga `(cTurt)` atua como o **Program Counter (PC)**: sua coordenada vertical indica a linha da instrução atual. Em chamadas de sub-rotina (`CALL`), ela salta lateralmente para a coluna da função chamada.
+
+2. **Banco de Registradores (`(rTurt)`):**
+   - Os registradores são posições de memória de trabalho imediato da CPU, permitindo cálculos e comparações rápidas.
+   - O hardware organiza 9 registradores (`reg_0` a `reg_8`) em uma grade de 3 x 3 pontos com espaçamento regular de 10 unidades.
+   - As posições `reg_0` a `reg_5` guardam dados e variáveis temporárias. As posições `reg_6`, `reg_7` e `reg_8` registram as flags de condição da instrução `CMP`, indicando respectivamente se o primeiro operando é igual (`==`), menor (`<`) ou maior (`>`) que o segundo.
+
+3. **Grade Principal de Memória 2D (`m.png` / `(mTurt)`):**
+   - Matriz bidimensional de 25 colunas por 21 linhas, totalizando 525 células de dados.
+   - Os endereços de 0 a 34 recebem os valores ASCII da flag informada pelo usuário, desenhados por cima da imagem inicial.
+   - Os endereços de 65 a 94 contêm a tabela de permutação fixa da Função 1.
+   - Os endereços de 95 a 518 contêm o oráculo com as 424 respostas esperadas da busca binária recursiva.
+   - A tartaruga `(mTurt)` caminha até a coordenada correspondente para ler a cor existente ou carimbar uma nova cor sobre a posição.
+
+4. **Trilho Linear da Pilha (`(sTurt)` - Stack Pointer):**
+   - Segmento de reta vertical com 120 posições.
+   - A pilha funciona sob o princípio LIFO (*Last In, First Out*), análogo a uma pilha de pratos onde o último dado empilhado é o primeiro a ser desempilhado.
+   - A tartaruga `(sTurt)` representa o **Stack Pointer (SP)**: ela avança para frente ao empilhar endereços de retorno em instruções `CALL` e recua em instruções `RET` e `DROP`. Entre os endereços 3 e 82 da pilha, o programa cria uma tabela de frequência para atestar que os 30 caracteres centrais da flag são todos diferentes entre si.
+
+5. **Ciclo de Instrução Visual:**
+   - Em vez de ler barramentos de fios de silício, a máquina consulta o canvas usando a função `find_overlapping(x, y, x, y)`. O movimento das quatro tartarugas coordena todo o fluxo de busca, decodificação, leitura de operandos e escrita dos resultados.
+
+### 2.3 O mecanismo visual: `find_overlapping` e precedência de camadas
+
+A máquina não lê valores de uma matriz convencional em memória RAM. A leitura é feita perguntando qual cor está desenhada no canvas naquele ponto:
+
+```python
+def getColor(turt):
+    x = int(turt.pos()[0])
+    y = -int(turt.pos()[1])
+    canvas = turtle.getcanvas()
+    ids = canvas.find_overlapping(x, y, x, y)
+    for index in ids[::-1]:
+        color = canvas.itemcget(index, "fill")
+        if color and color[0] == "#":
+            return hexToRgb(color)
+    return (255, 255, 255)
+```
+
+O método `find_overlapping(x, y, x, y)` retorna todos os elementos gráficos que tocam a coordenada $(x, y)$, ordenados do mais antigo (fundo) até o mais recente (topo). Ao usar `ids[::-1]`, o código lê a cor do **último elemento desenhado**.
+
+Esse detalhe governa o ciclo de leitura e escrita da memória:
+1. Primeiro, `turt.py` desenha a imagem `m.png` inteira no canvas.
+2. Em seguida, desenha os caracteres da flag informada pelo usuário nas primeiras 35 posições.
+3. Como os traços da flag foram desenhados depois, `getColor` lê as letras digitadas e não os pixels originais de `m.png` nas posições 0 a 34.
+4. Quando o programa precisa alterar o valor de uma célula durante a execução (`writeM`), a tartaruga caminha até a célula e faz um traço de comprimento zero com a caneta abaixada (`pendown()` e `forward(0)`). Isso cria um ponto novo por cima do anterior, atualizando o valor daquela posição.
+
+### 2.4 Como uma instrução é codificada
+
+Cada instrução ocupa **3 pixels em sequência na mesma linha** de `c.png`:
+- `color0`: define a operação a executar (opcode) e traz as sinalizações (*flags*) que dizem como ler os operandos.
+- `color1`: define o primeiro operando (geralmente o destino).
+- `color2`: define o segundo operando (geralmente a fonte).
+
+Os 2 bits menos significativos de cada canal de cor do pixel `color0` indicam o modo de endereçamento dos operandos:
+
+```
+color0:
+  Canal R: [ Opcode R (6 bits) ] [ isR2 (bit 1) ] [ isR1 (bit 0) ]  -> Registrador direto
+  Canal G: [ Opcode G (6 bits) ] [ isP2 (bit 1) ] [ isP1 (bit 0) ]  -> Ponteiro (Memória ou Pilha)
+  Canal B: [ Opcode B (6 bits) ] [ isC2 (bit 1) ] [ isC1 (bit 0) ]  -> Constante numérica
+```
+
+* **Constantes numéricas (24 bits):** cada pixel reúne três valores de 0 a 255 (Vermelho $B_0$, Verde $B_1$ e Azul $B_2$). O valor numérico é calculado na convenção **little-endian** (o byte de menor peso vem primeiro):
+  $$\text{Const} = B_0 + (B_1 \ll 8) + (B_2 \ll 16) \pmod{2^{24}}$$
+  Esse número é interpretado **com sinal**: se for maior ou igual à metade do limite máximo ($8.388.608$), ele representa um número negativo ($\text{Const} - 2^{24}$). Isso permite fazer saltos relativos para trás, viabilizando laços de repetição (loops).
+* **Registradores:** o índice do registrador de 0 a 8 é obtido por `(byte - 20) // 40`.
+* **Ponteiros (acesso indireto):** o endereço final é obtido por `reg_A + reg_B + offset`. Se a flag `isR` estiver ligada junto com `isP`, o acesso ocorre na **pilha** (`STACK[...]`). Caso contrário, ocorre na **memória global** (`MEM[...]`).
+
+### 2.5 A tabela de opcodes: processo de redescoberta
+
+O arquivo `turt.py` não traz comentários indicando qual cor representa cada comando. Para descobrir a semântica da máquina, foi necessário inspecionar a função `run()` e analisar o que o código executa em cada bloco condicional. A partir desse comportamento prático, demos nomes aos comandos por analogia com instruções assembly tradicionais.
+
+**Passo 1: isolar a estrutura de decisão.** A função `run()` lê a cor do primeiro pixel e aplica uma máscara de bits:
 
 ```python
 color0 = getColor(cTurt)
-cmpcolor = (color0[0]&0xfc, color0[1]&0xfc, color0[2]&0xfc)
-...
-if cmpcolor == (0,252,0):
-    ...
-elif cmpcolor == (252,0,0):
-    ...
+cmpcolor = (color0[0] & 0xfc, color0[1] & 0xfc, color0[2] & 0xfc)
 ```
 
-A **cor mascarada** (`cmpcolor`) do primeiro pixel de cada instrução
-é o "opcode"; o resto é um `if/elif` comparando essa cor contra
-valores fixos. A máscara `& 0xfc` zera os 2 bits menos significativos
-de cada canal — separando a cor em "opcode" (bits altos) e "flags de
-operando" (os 2 bits baixos de cada canal, usados no Passo 3).
+A cor mascarada (`cmpcolor`) isola os 6 bits superiores de cada canal RGB. Os 2 bits inferiores são descartados nesse momento para serem usados como flags de operando.
 
-**Passo 2 — nomear cada operação pelo comportamento.** Para cada
-bloco `elif`, lemos o que o código **faz**, e escolhemos um nome:
+**Passo 2: nomear cada operação pelo comportamento.** Para cada bloco condicional de `cmpcolor`, observamos a ação executada:
 
-| Cor mascarada | O que o código faz (evidência) | Nome escolhido |
-|---|---|---|
-| `(0, 252, 0)` | `return "correct"` (adaptado; original: `print("correct flag!"); exit(0)`) | **success** |
-| `(252, 0, 0)` | `return "wrong"` (original: `print("wrong flag :C"); exit(0)`) | **fail** |
-| `(204, 204, 252)` | `sTurt.forward(readC(color1)*5)` — move o ponteiro da pilha | **sp_adjust** |
-| `(220, 252, 0)` | escreve `val2` direto no destino, sem operação matemática | **mov** |
-| `(252, 188, 0)` | escreve o **endereço calculado** (`readPA`), não o valor lido | **lea** |
-| `(64, 224, 208)` | `write(color1, val1 + val2, ...)` | **add** |
-| `(156, 224, 188)` | `write(color1, val1 - val2, ...)` | **sub** |
-| `(100, 148, 236)` | `write(color1, val1 >> val2, ...)` | **shr** |
-| `(252, 124, 80)` | grava 3 resultados de comparação (igual/menor/maior) em registradores | **cmp** |
-| `(220, 48, 96)` | move o ponteiro de código condicionalmente, conforme flags/registradores | **jcc** (salto condicional) |
-| `(252, 0, 252)` | guarda posição na pilha + salta para outra posição do código | **call** |
-| `(128, 0, 128)` | recupera posição da pilha + volta o ponteiro de código | **ret** |
+| Cor mascarada | Ação no código | Mnemônico escolhido | O que faz |
+|---|---|---|---|
+| `(0, 252, 0)` | `print("correct flag!"); exit(0)` | **WIN / success** | Finaliza a execução confirmando a flag correta. |
+| `(252, 0, 0)` | `print("wrong flag :C"); exit(0)` | **LOSE / fail** | Finaliza a execução indicando flag incorreta. |
+| `(204, 204, 252)` | `sTurt.forward(readC(color1) * 5)` | **DROP / sp_adjust** | Ajusta o ponteiro da pilha (`SP += val`). |
+| `(220, 252, 0)` | `write(color1, val2, ...)` | **MOV** | Copia o valor da fonte diretamente no destino (`dst = src`). |
+| `(252, 188, 0)` | `write(color1, readPA(color2, isC2), ...)` | **LEA** | Calcula o endereço da fonte e grava no destino (`dst = addr`). |
+| `(64, 224, 208)` | `write(color1, val1 + val2, ...)` | **ADD** | Realiza a soma de dois valores (`dst = dst + src`). |
+| `(156, 224, 188)` | `write(color1, val1 - val2, ...)` | **SUB** | Realiza a subtração de dois valores (`dst = dst - src`). |
+| `(100, 148, 236)` | `write(color1, val1 >> val2, ...)` | **SHR** | Desloca bits para a direita (`dst = dst >> src`). |
+| `(252, 124, 80)` | atualiza `reg_6` (igual), `reg_7` (menor) e `reg_8` (maior) | **CMP** | Compara dois valores e atualiza os três registradores de flag. |
+| `(220, 48, 96)` | move `cTurt` para frente ou para trás na vertical | **JUMP / jcc** | Salto condicional relativo na mesma coluna de código. |
+| `(252, 0, 252)` | grava retorno na pilha e salta para outra coluna | **CALL** | Chama outra função guardando a posição de retorno. |
+| `(128, 0, 128)` | recupera coordenadas da pilha e retorna | **RET** | Retorna da chamada de função para o chamador original. |
 
-Cada linha tem uma evidência concreta no código-fonte — não é
-suposição. Por exemplo, sabemos que `(252, 188, 0)` é `lea` e não
-`mov` porque, olhando a diferença:
+A distinção entre `MOV` e `LEA` fica evidente na linha de leitura da fonte:
 
 ```python
 if cmpcolor == (252, 188, 0):
-    val2 = readPA(color2, isC2)      # <- calcula um ENDEREÇO
+    val2 = readPA(color2, isC2)             # calcula o endereço efetivo (LEA)
 else:
-    val2 = read(color2, isR2, isP2, isC2)   # <- lê um VALOR
+    val2 = read(color2, isR2, isP2, isC2)   # lê o valor guardado no endereço (MOV)
 ```
 
-Isso é exatamente a diferença entre `mov` e `lea` em assembly real:
-`mov` lê o *conteúdo* de um endereço; `lea` usa o *próprio endereço*
-como valor.
+Essa é a exata diferença entre ler o conteúdo de um endereço (`MOV`) e capturar o próprio endereço calculado (`LEA`).
 
-**Passo 3 — decodificar as flags dos operandos.** Os 2 bits menos
-significativos de cada canal de `color0` (descartados do opcode pela
-máscara) reaparecem assim:
+**Passo 3: decodificar as flags dos operandos.** Os 2 bits inferiores de cada canal de `color0` informam o formato dos operandos:
 
 ```python
-isR1 = color0[0]&1 != 0
-isP1 = color0[1]&1 != 0
-isC1 = color0[2]&1 != 0
-isR2 = color0[0]&2 != 0
-isP2 = color0[1]&2 != 0
-isC2 = color0[2]&2 != 0
+isR1 = color0[0] & 1 != 0    # bit 0 de R: primeiro operando é registrador?
+isP1 = color0[1] & 1 != 0    # bit 0 de G: primeiro operando é ponteiro?
+isC1 = color0[2] & 1 != 0    # bit 0 de B: primeiro operando é constante?
+isR2 = color0[0] & 2 != 0    # bit 1 de R: segundo operando é registrador?
+isP2 = color0[1] & 2 != 0    # bit 1 de G: segundo operando é ponteiro?
+isC2 = color0[2] & 2 != 0    # bit 1 de B: segundo operando é constante?
 ```
 
-Bit 0 de cada canal descreve o **primeiro operando** (registrador?
-memória/pilha? constante?); bit 1 descreve o **segundo operando**.
-Isso foi descoberto seguindo onde essas 6 variáveis são usadas mais
-adiante.
-
-**Passo 4 — o caso mais sutil: o salto condicional.** A cor
-`(220, 48, 96)` reaproveita os mesmos 4 bits (canais R e G de
-`color0`) para codificar **quais condições** disparam o salto:
+**Passo 4: o salto condicional e o salto incondicional.** Na instrução de salto `(220, 48, 96)`, os bits de `color0` selecionam quais condições disparam o deslocamento:
 
 ```python
-e = readRVal(6)   # "igual" (resultado do último cmp)
-l = readRVal(7)   # "menor"
-g = readRVal(8)   # "maior"
-if (color0[0]&1 != 0 and e) or (color0[1]&1 != 0 and not e) or (color0[0]&2 != 0 and l) or (color0[1]&2 != 0 and g):
-    ...salta...
+e = readRVal(6)   # resultado igual da última comparação
+l = readRVal(7)   # resultado menor
+g = readRVal(8)   # resultado maior
+
+if (color0[0] & 1 != 0 and e) or (color0[1] & 1 != 0 and not e) or \
+   (color0[0] & 2 != 0 and l) or (color0[1] & 2 != 0 and g):
+    # executa o salto somando o deslocamento relativo
 ```
 
-R&1 liga "salta se igual", G&1 liga "salta se diferente", R&2 liga
-"salta se menor", G&2 liga "salta se maior". Se **todos os 4 bits**
-estiverem ligados ao mesmo tempo, alguma condição é sempre
-verdadeira — vira um salto **incondicional** (`jmp`). Isso não está
-escrito em lugar nenhum como "jmp" — é uma consequência lógica de
-combinar as 4 condições, percebida simulando alguns casos na mão.
-
-**A tabela final** (usada em `solver/turt_headless.py`):
-
-| Cor mascarada | Operação |
-|---|---|
-| `(0, 252, 0)` | success (flag correta) |
-| `(252, 0, 0)` | fail (flag errada) |
-| `(204, 204, 252)` | ajuste do ponteiro de pilha |
-| `(220, 252, 0)` | mov |
-| `(252, 188, 0)` | lea |
-| `(64, 224, 208)` | add |
-| `(156, 224, 188)` | sub |
-| `(100, 148, 236)` | shr |
-| `(252, 124, 80)` | cmp |
-| `(220, 48, 96)` | salto condicional (jcc) |
-| `(252, 0, 252)` | call |
-| `(128, 0, 128)` | ret |
-
-### 2.4 — A lógica de negócio (o crackme em si)
-
-Confirmado ao rodar o programa (Seção 6): a flag precisa ter
-**exatamente 35 caracteres**. A lógica embutida em `c.png` verifica,
-nessa ordem:
-
-1. Um cabeçalho fixo (`CTF{` no início, `}` no fim).
-2. Que os 30 caracteres internos são todos **únicos**.
-3. Para cada caractere possível do intervalo ASCII `'+'` (43) até
-   `'z'` (122), roda uma **busca binária recursiva** contra os
-   caracteres da flag, comparando o resultado de cada passo (menor,
-   maior, igual) com um valor **fixo, gravado em `m.png`**.
-4. Reordena os caracteres encontrados usando um array de permutação,
-   também gravado em `m.png`.
+O canal R bit 0 ativa "se igual", G bit 0 ativa "se diferente", R bit 1 ativa "se menor" e G bit 1 ativa "se maior". Se os quatro bits estiverem ligados simultaneamente, a expressão resulta sempre em verdadeiro, criando um **salto incondicional** (`JUMP`).
 
 ---
 
-## 3. Teoria necessária
+## 3. Engenharia reversa do bytecode (`c.png`)
+
+A imagem `c.png` possui 9 pixels de largura por 83 de altura. Cada instrução utiliza 3 pixels de largura. Isso significa que o programa é composto por 3 colunas paralelas, correspondendo a três funções:
+
+```
+Colunas em c.png:
+[Coluna 0: Função 0 (Main)]  |  [Coluna 1: Função 1 (Sort)]  |  [Coluna 2: Função 2 (BinSearch)]
+```
+
+### 3.1 Função 0 (Main): formato, charset e unicidade
+
+A Função 0 é o ponto de entrada da CPU e executa as seguintes etapas:
+
+**1. Verificação do envelope `CTF{...}`:**
+O programa lê os primeiros 4 caracteres e o último caractere da entrada:
+```asm
+01: MOV reg_2, MEM[0]     ; Lê caractere 0
+02: CMP reg_2, 67         ; Compara com 'C' (ASCII 67)
+03: JUMP BY 13 IF !=      ; Se diferente, desvia para LOSE
+04: MOV reg_2, MEM[1]     ; Compara com 'T' (ASCII 84)
+...
+10: MOV reg_2, MEM[3]     ; Compara com '{' (ASCII 123)
+13: MOV reg_2, MEM[34]    ; Lê caractere 34 (último caractere)
+14: CMP reg_2, 125        ; Compara com '}' (ASCII 125)
+```
+
+**2. Criação do mapa de contagem:**
+Zera um vetor de 80 posições na pilha (`STACK[3..82] = 0`). Esse vetor serve como tabela de frequência para detectar repetições.
+
+**3. Validação do charset:**
+Percorre as posições de 4 a 33 (os 30 caracteres do miolo) e testa se cada caractere $c$ está no intervalo:
+$$43 \le c \le 122 \quad (\text{entre '+' e 'z' na tabela ASCII})$$
+
+**4. Verificação de unicidade:**
+Para cada caractere $c$, lê a célula `STACK[c - 43 + 3]`. Se o valor for diferente de zero, aciona `LOSE`. Se for zero, grava o valor `65025`. Isso prova que **todos os 30 caracteres do miolo precisam ser estritamente distintos**.
+
+**5. Encadeamento:**
+Chama a Função 1 (`CALL RIGHT 3 UP 54`) para reordenar os caracteres. Depois, percorre em loop todos os valores ASCII de 43 a 122 chamando a Função 2 (busca binária). Se nenhuma comparação falhar, alcança a linha 68 e aciona `WIN`.
+
+### 3.2 Função 1 (Sort): permutação por tabela estática
+
+A Função 1 reordena os 30 caracteres internos da flag usando uma tabela gravada nos pixels 65 a 94 de `m.png`:
+
+```asm
+00: MOV reg_2, 4               ; Índice inicial da flag original (MEM[4])
+02: MOV STACK[-3], 0           ; Iterador i = 0
+04: CMP reg_2, 29              ; Loop de i=0 até i=29
+...
+11: MOV reg_4, 65              ; Base da tabela de permutação (MEM[65])
+12: MOV reg_2, MEM[reg_2+reg_4]; dest = MEM[65 + i] (posição de destino)
+13: MOV reg_5, MEM[reg_5]      ; char = flag[i]      (caractere original)
+15: MOV MEM[reg_2+reg_4], reg_5; MEM[35 + dest] = char (copia para buffer de saída)
+16: ADD STACK[-3], 1           ; i++
+17: JUMP BY -14                ; Volta ao início do laço
+18: RETURN THISFUN 18          ; Retorna ao Main
+```
+
+O efeito desse laço é reordenar os 30 bytes da flag em `MEM[35..64]` segundo a tabela fixa:
+$$\text{MEM}[35 + \text{perm}[i]] = \text{flag}[4 + i]$$
+
+### 3.3 Função 2 (BinSearch): busca binária recursiva com oráculo
+
+A Função 2 implementa uma busca binária sobre o buffer permutado (`MEM[35..64]`). O endereço de memória `MEM[519]` armazena um contador global de comparações realizadas (`cmp_count`):
+
+```asm
+07: MOV reg_2, MEM[519]        ; Lê contador de comparações
+08: CMP reg_2, 424             ; Limite esperado de 424 passos
+...
+11: CMP STACK[1], 0            ; flaglen == 0 ? (partição vazia)
+14: LEA reg_5, reg_2+1         ; cmp_count++
+15: MOV MEM[519], reg_5
+17: MOV reg_2, MEM[reg_2+95]   ; Lê resultado esperado em MEM[95 + cmp_count]
+18: CMP reg_2, 4               ; Se partição vazia, esperado deve ser 4
+...
+23: SHR reg_2, 1               ; mid = (flaglen - 1) / 2
+28: MOV reg_2, MEM[reg_2]      ; elemento = buffer[mid]
+29: CMP STACK[2], reg_2        ; Compara o valor buscado (tgt) com buffer[mid]
+```
+
+Para cada iteração de teste:
+- Se `tgt < buffer[mid]`: o valor esperado em `MEM[95 + cmp_count]` precisa ser **1**. Faz chamada recursiva na metade esquerda.
+- Se `tgt > buffer[mid]`: o valor esperado precisa ser **2**. Faz chamada recursiva na metade direita.
+- Se `tgt == buffer[mid]`: o valor esperado precisa ser **3**. O caractere foi localizado no vetor.
+- Se a partição atingir tamanho zero (`flaglen == 0`): o valor esperado precisa ser **4**. O caractere não pertence à flag.
+
+Se qualquer comparação divergir do valor tabelado, o fluxo desvia para `LOSE`.
+
+A sequência de 424 valores gravada em `m.png` (posições 95 a 518) atua como um **oráculo**: ela traz as respostas corretas de cada comparação da busca binária, permitindo deduzir a posição de cada caractere sem precisar adivinhar nada.
+
+---
+
+## 4. Reconstrução da flag e resolução matemática
+
+### 4.1 A sequência de comparações em `m.png`
+
+O Main testa todos os 80 caracteres do intervalo ASCII $[43, 122]$ em ordem crescente. Como os 30 caracteres da flag já foram colocados em ordem crescente no buffer `MEM[35..64]`, cada busca binária traça um caminho previsível na árvore de partições.
+
+A imagem `m.png` traz dois blocos essenciais:
+- **Bytes 65 a 94 (30 valores):** a tabela de permutação da Função 1.
+- **Bytes 95 a 518 (424 valores):** a sequência dos resultados esperados das comparações.
+
+### 4.2 Dedução dos caracteres ordenados
+
+Ao reproduzir os passos da busca binária guiando-se pelas respostas gravadas em `m.png`, sempre que encontramos o resultado `3` sabemos com certeza qual caractere ocupa aquela posição do vetor ordenado:
+
+```python
+mid = (flaglen - 1) // 2
+if cmp_result == 1:
+    flaglen = mid                # Busca à esquerda
+elif cmp_result == 2:
+    left += mid + 1              # Busca à direita
+    flaglen -= mid + 1
+elif cmp_result == 3:
+    sorted_flag[left + mid] = chr(tgt)  # Caractere localizado
+    break
+elif cmp_result == 4:
+    break                        # Caractere não faz parte da flag
+```
+
+Ao rodar esse processo para todos os valores de `tgt` entre 43 e 122, obtemos as 30 letras na ordem classificada:
+
+$$\text{sorted\_flag} = \texttt{"+-./01357:;AELTUWY\_adehilnrstw"}$$
+
+### 4.3 Inversão da permutação e recomposição final
+
+A tabela de permutação extraída de `MEM[65..94]` é:
+
+```python
+perm = [23, 14,  7, 18, 12,  1, 28, 15, 26,  0,
+         5, 21, 27,  3, 11, 24, 13,  2,  8, 22,
+         6, 10, 29, 19, 17,  9, 20,  4, 16, 25]
+```
+
+Como a Função 1 gravou o caractere de posição original $i$ na posição `perm[i]` do buffer ordenado, para recuperar a flag original basta consultar o caractere ordenado correspondente:
+
+$$\text{flag\_original}[i] = \text{sorted\_flag}[\text{perm}[i]]$$
+
+Mapeando cada índice:
+
+| Índice original | Posição ordenada (`perm[i]`) | Caractere |
+|---|---|---|
+| 0 | 23 | `i` |
+| 1 | 14 | `T` |
+| 2 | 7 | `5` |
+| 3 | 18 | `_` |
+| 4 | 12 | `E` |
+| 5 | 1 | `-` |
+| 6 | 28 | `t` |
+| 7 | 15 | `U` |
+| 8 | 26 | `r` |
+| 9 | 0 | `+` |
+| 10 | 5 | `1` |
+| 11 | 21 | `e` |
+| 12 | 27 | `s` |
+| 13 | 3 | `/` |
+| 14 | 11 | `A` |
+| 15 | 24 | `l` |
+| 16 | 13 | `L` |
+| 17 | 2 | `.` |
+| 18 | 8 | `7` |
+| 19 | 22 | `h` |
+| 20 | 6 | `3` |
+| 21 | 10 | `;` |
+| 22 | 29 | `w` |
+| 23 | 19 | `a` |
+| 24 | 17 | `Y` |
+| 25 | 9 | `:` |
+| 26 | 20 | `d` |
+| 27 | 4 | `0` |
+| 28 | 16 | `W` |
+| 29 | 25 | `n` |
+
+Unindo o miolo ao envelope `CTF{...}`:
+
+$$\mathbf{CTF\{iT5\_E-tUr+1es/AlL.7h3\text{;}waY\text{:}d0Wn\}}$$
+
+---
+
+## 5. Teoria necessária
 
 - **Codificação de instruções em pixels:** usar bits de canais de cor para transportar informação combinada (opcode mais flags de operando) é análogo a como arquiteturas de processadores reais codificam registradores e modos de endereçamento dentro dos bits de uma mesma palavra de instrução.
 - **Busca binária como oráculo determinístico:** em vez de usar o algoritmo apenas para buscar dados em um array, usamos os resultados das comparações já gravadas para identificar quais caracteres pertencem à flag e onde se encontram. Cada comparação reduz o espaço pela metade, rodando em tempo linear $\mathcal{O}(|\Sigma| \cdot \log N)$, onde $|\Sigma|$ é o alfabeto testado e $N$ é o tamanho do vetor.
@@ -224,101 +429,92 @@ nessa ordem:
 
 ---
 
-## 4. Ambiente, dependências e a decisão de reprodutibilidade mais importante
+## 6. Ambiente, dependências e decisão de reprodutibilidade
 
 **Não usamos Tkinter, nem Xvfb, nem qualquer ambiente gráfico.**
 
-A execução original de `turt.py` depende da biblioteca `turtle`
-(construída sobre Tkinter), que por sua vez precisa de um display
-gráfico — em servidores sem tela, isso normalmente exige o `Xvfb`
-(*X Virtual Framebuffer*, um "monitor falso"). Isso é uma fonte real
-de atrito na reprodução (a planilha do desafio já avisa: "o tempo de
-execução não foi medido").
+O script original `turt.py` depende da biblioteca gráfica `turtle`, que por sua vez exige uma janela do Tkinter aberta. Em servidores e contêineres sem monitor, rodar o script original exigiria instalar e configurar o `Xvfb` (*X Virtual Framebuffer*).
 
-**Nossa solução:** como `c.png` e `m.png` já contêm toda a
-informação (código e memória), escrevemos um **shim headless** —
-`solver/headless_turtle.py` — que substitui só a camada gráfica por
-um dicionário Python simples, guardando "que cor foi pintada em cada
-posição". Rodamos o `turt.py` **original, sem alterar nenhuma linha
-de lógica de negócio**, só trocando essa camada.
+Para eliminar esse atrito e permitir testes instantâneos, desenvolvemos um **shim headless** (`solver/headless_turtle.py`): ele reimplementa os métodos da classe `Turtle` usando um dicionário em memória que mapeia coordenadas $(x, y)$ para cores, permitindo executar o arquivo original `turt.py` com apenas 3 linhas adaptadas (`solver/turt_headless.py`), mantendo 100% da lógica original.
 
-**Dependências:**
-- Python 3
-- `Pillow` (`pip install -r solver/requirements.txt`) — única
-  dependência externa, usada só para ler os pixels de `c.png`/`m.png`.
+### 6.1 Verificação de integridade dos arquivos originais
+
+Os arquivos originais guardados em `challenge/` foram validados contra o commit oficial `1655538e...`:
+
+| Arquivo | Tamanho | SHA-256 |
+|---|---|---|
+| `challenge/turt.py` | 8.393 bytes | `e9ba509e45f76fb591c59dbb23e41940159ad55a1282637cdde542181e981af4` |
+| `challenge/c.png` | 972 bytes | `93fc64039bfabdcb63ae2d2fb0b9d971f3d8611e1d592cf136b4d348cc33e76f` |
+| `challenge/m.png` | 365 bytes | `362e0b5c82b331df38ea0560c9469da3ca603490924a01ab84687f347920e518` |
 
 ---
 
-## 5. Estrutura do repositório
+## 7. Estrutura do repositório
 
 ```
-turtle-writeup/
-├── README.md
-├── .gitignore
-├── challenge/                    # arquivos ORIGINAIS do desafio (nao alterados)
-│   ├── turt.py
-│   ├── c.png
-│   └── m.png
-└── solver/                       # nosso codigo
-    ├── headless_turtle.py        # shim headless (substitui so o Tkinter)
-    ├── turt_headless.py          # copia fiel de turt.py, rodando sem GUI
-    ├── resolve_turtle.py         # script principal: extrai, reconstroi e valida
-    └── requirements.txt          # Pillow
+googlectf2023-turtle-writeup/
+├── README.md                 # Relatório técnico completo da solução
+├── hardware.png              # Diagrama e anatomia visual do hardware em execução
+├── .gitignore                # Exclusões de ambiente virtual e arquivos temporários
+│
+├── challenge/                # Arquivos ORIGINAIS do desafio (sem qualquer alteração)
+│   ├── turt.py               # Interpretador da CPU Turtle (GUI original)
+│   ├── c.png                 # Bytecode das três funções (9x83 px)
+│   └── m.png                 # Memória inicial, tabela e comparações (25x21 px)
+│
+└── solver/                   # Códigos de análise e solução
+    ├── headless_turtle.py    # Shim que substitui o Tkinter por dicionário em memória
+    ├── turt_headless.py      # Execução fiel de turt.py sem interface gráfica
+    ├── resolve_turtle.py     # Script principal: extrai arrays, reconstrói e valida
+    ├── generate_hardware.py  # Script que renderiza a imagem hardware.png
+    └── requirements.txt      # Dependência externa (Pillow)
 ```
 
 ---
 
-## 6. Origem dos artefatos e adaptações do grupo
+## 8. Origem dos artefatos e adaptações do grupo
 
-- **`turt.py`, `c.png`, `m.png`**: baixados do repositório oficial
-  do desafio (ver Seção 8, Referências) — **não foram alterados em
-  nenhum byte**.
-- **`headless_turtle.py`**: escrito do zero pelo grupo — nenhuma
-  linha vem de nenhuma fonte externa.
-- **`turt_headless.py`**: **cópia fiel** de `turt.py`, com exatamente
-  3 adaptações documentadas no topo do próprio arquivo — troca do
-  import gráfico, reescrita da função `getColor()`, e o bloco final
-  transformado em função reutilizável. Todo o resto (cada linha de
-  `loadM`, `readM`, `writeM`, `loadS`, `readS`, `writeS`, `loadR`,
-  `readR`, `writeR`, `loadC`, `drawImg`, `read`, `write`, `readC`,
-  `cToColor`, `run`, etc.) é idêntico ao original.
-- **`resolve_turtle.py`**: escrito do zero — a lógica de extração e
-  reconstrução da flag foi desenvolvida de forma independente pelo
-  grupo (ver Seção 7 sobre a conferência com o write-up público).
+- **`challenge/turt.py`, `challenge/c.png`, `challenge/m.png`:** baixados diretamente do repositório oficial do Google CTF 2023, mantidos intactos sem alteração de nenhum byte.
+- **`solver/headless_turtle.py`:** desenvolvido do zero pelo grupo para emular as chamadas da tartaruga com um dicionário de coordenadas em memória.
+- **`solver/turt_headless.py`:** cópia fiel do interpretador original, trazendo apenas três adaptações documentadas no topo do arquivo: troca do módulo gráfico pelo shim, leitura de cor direta do dicionário e encapsulamento em função reutilizável.
+- **`solver/resolve_turtle.py`:** script principal de solução, que extrai a tabela de permutação, simula a busca binária sobre os dados de `m.png`, reconstrói a flag e a valida executando a VM de ponta a ponta.
+- **`solver/generate_hardware.py`:** script construído pelo grupo para renderizar e salvar o estado visual fiel da CPU em `hardware.png`.
 
 ---
 
-## 7. Como rodar (instruções de ponta a ponta)
+## 9. Como rodar (instruções de ponta a ponta)
 
-### Linux / macOS
+### 9.1 Linux / macOS
 
 ```bash
+# 1. Entrar na pasta solver
 cd solver
+
+# 2. Criar e ativar o ambiente virtual
 python3 -m venv venv
 source venv/bin/activate
+
+# 3. Instalar dependências
 pip install -r requirements.txt
 
+# 4. Executar o solver principal e a validação de ponta a ponta
 python3 resolve_turtle.py
 ```
 
-### Windows (PowerShell)
+### 9.2 Windows (PowerShell)
 
 ```powershell
 cd solver
 python -m venv venv
-venv\Scripts\activate
+.\venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 
 python resolve_turtle.py
 ```
 
-> `resolve_turtle.py` copia `c.png` e `m.png` de `../challenge/`
-> automaticamente na primeira execução (ver comentário no topo do
-> arquivo) — não é necessário copiar nada manualmente.
+### 9.3 Saída esperada da execução
 
-### Saída esperada
-
-```
+```text
 ======================================================================
 PASSO 1 — Carregando a memória (m.png) com um placeholder
 ======================================================================
@@ -342,7 +538,7 @@ Tamanho: 35 (esperado: 35)
 PASSO 4 — Validação final: rodando a VM completa, do zero
 ======================================================================
 Resultado da execução completa: correct
-Tempo: 0.15s
+Tempo: 0.11s
 
 [SUCESSO] A flag reconstruída foi ACEITA pelo programa original,
 rodando de ponta a ponta.
@@ -350,89 +546,27 @@ rodando de ponta a ponta.
 
 ---
 
-## 8. Explicação das etapas do código
+## 10. Evidência de reprodução
 
-### `headless_turtle.py`
-
-Reimplementa só o subconjunto da API de `turtle.Turtle()` que o
-desafio usa (`forward`, `back`, `left`, `right`, `penup`, `pendown`,
-`pencolor`, `pos`, `speed`, `pensize`). Internamente, guarda um
-dicionário `CANVAS` mapeando posições `(x, y)` para cores — a
-"tela" inteira vira uma estrutura de dados comum, sem nenhuma
-dependência gráfica. Comentários extensos em cada método explicam a
-tradução exata de "andar/girar" em aritmética de coordenadas.
-
-### `turt_headless.py`
-
-Cópia do desafio original, com as 3 adaptações documentadas no topo
-do próprio arquivo. A função `run()` — o "loop principal da CPU" —
-tem comentários explicando cada opcode, remetendo à tabela
-documentada em `docs/redescoberta-opcodes.md`.
-
-### `resolve_turtle.py`
-
-Script principal, dividido em 4 passos (ver comentário no topo do
-arquivo e Seção 7 acima): carrega a memória com uma flag placeholder,
-extrai os dois arrays relevantes (reordenação + resultados de busca),
-reconstrói a flag combinando os dois, e **valida rodando a VM
-completa** com a flag reconstruída — não se contenta em só extrair
-constantes estaticamente.
+Os pontos que comprovam a correção da solução:
+- O array de reordenação extraído é uma bijeção matemática válida de 0 a 29 (conferido via `sorted(array) == list(range(30))`).
+- A flag recuperada possui exatamente 35 caracteres, respeitando o envelope `CTF{...}` exigido pela Função 0.
+- A validação no Passo 4 executa a VM original instrução por instrução e retorna `"correct"` em cerca de 0,11 segundos, comprovando a aceitação total da entrada.
 
 ---
 
-## 9. Evidência de reprodução
+## 11. Contribuições próprias do grupo
 
-Executado com sucesso, do zero, conforme a saída completa mostrada
-na Seção 7. Os pontos-chave de evidência:
-
-- **O array de reordenação é uma permutação válida** de 0 a 29
-  (conferido programaticamente: `sorted(array) == list(range(30))`).
-- **A flag reconstruída tem exatamente 35 caracteres**, como exigido
-  pelo programa original.
-- **A validação final roda a VM inteira, instrução por instrução**,
-  e confirma `"correct"` — não é uma inferência estática apenas; é
-  a prova de que o programa original, rodando de ponta a ponta,
-  aceita essa flag.
+- **Emulador headless com shim de canvas:** em vez de depender de interfaces gráficas pesadas ou do `Xvfb`, construímos uma camada que roda o código original da competição sem alterar a lógica de CPU da máquina.
+- **Redescoberta investigativa da ISA:** processo documentado passo a passo a partir da leitura do código, provando a dedução independente dos 12 opcodes e dos modos de endereçamento.
+- **Solução direta por inversão de restrições:** reconstrução da flag guiando-se pelas 424 respostas da busca binária e inversão da permutação estática, dispensando força bruta.
 
 ---
 
-## 10. Contribuições próprias do grupo
+## 12. Referências
 
-- **Emulador headless completo**, mantendo a lógica original
-  **100% intacta** — uma alternativa mais rigorosa a só descrever a
-  tabela de opcodes: provamos que o programa reconstruído se
-  comporta identicamente ao original, porque **é o mesmo código**,
-  rodando sem GUI.
-- **Redescoberta documentada da tabela de opcodes** (Seção 2.3) —
-  processo registrado com evidência linha a linha do código-fonte
-  para cada entrada da tabela, não apenas o resultado final.
-- **Validação de ponta a ponta via execução completa da VM** — em
-  vez de só extrair arrays estaticamente (o suficiente para
-  "adivinhar" a flag), rodamos o programa original inteiro com a
-  flag reconstruída, obtendo a confirmação `"correct"` do próprio
-  programa.
-- **Zero dependência de ambiente gráfico** — eliminando por completo
-  a necessidade de Tkinter/Xvfb mencionada como fonte de incerteza
-  nos materiais do desafio.
-- **Código extensamente comentado**, pensado para que qualquer
-  pessoa do grupo consiga apresentar a solução mesmo sem ter escrito
-  o código originalmente.
-
----
-
-## 11. Referências
-
-- Código-fonte e descrição oficial do desafio: repositório
-  [`google/google-ctf`](https://github.com/google/google-ctf),
-  `2023/quals/rev-turtle` (commit
-  `1655538e8c8b41451d39f670ef15a5af22979ca9`).
-- Página do desafio no CTFtime:
-  [ctftime.org/task/25686](https://ctftime.org/task/25686).
-- Write-up consultado para conferência independente (não usado como
-  fonte da nossa implementação): Bo-Shiun Yen (bronson113),
-  *"GoogleCTF 2023 Writeup"* — seção Turtle, incluindo o
-  desassemblador de referência (`translate.py`) e o solver original
-  (`solve.py`). Disponível também via
-  [CTFtime](https://ctftime.org/writeup/37339).
-- Resultados/soluções do evento: `taskSolutions/rev-turtle.json`,
-  Firebase público do Google CTF 2023.
+- GOOGLE. **Google CTF 2023 Quals Repository**. Desafio rev-turtle, commit `1655538e8c8b41451d39f670ef15a5af22979ca9`. Disponível em: <https://github.com/google/google-ctf/tree/master/2023/quals/rev-turtle>. Acesso em: 27 set. 2026.
+- CTFTIME. **Google Capture The Flag 2023 (Quals), Task: Turtle**. Disponível em: <https://ctftime.org/task/25686>. Acesso em: 27 set. 2026.
+- YEN, B. **GoogleCTF 2023 Writeup, Turtle Section**. Disponível em: <https://ctftime.org/writeup/37339>. Acesso em: 27 set. 2026.
+- PYTHON SOFTWARE FOUNDATION. **Turtle Graphics Documentation (Python 3.13)**. Disponível em: <https://docs.python.org/3/library/turtle.html>. Acesso em: 27 set. 2026.
+- TKINTER AUTHORS. **Tkinter Canvas Widget Documentation**. Disponível em: <https://tkdocs.com/shipman/canvas.html>. Acesso em: 27 set. 2026.

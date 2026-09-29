@@ -19,7 +19,7 @@ O QUE ESSE SCRIPT FAZ, EM 4 PASSOS:
             (Os primeiros 35 endereços viram a flag placeholder;
             isso não atrapalha, porque os dois arrays que
             precisamos estão em endereços mais altos, a partir do
-            35 — ver docs/redescoberta-opcodes.md para o raciocínio
+            35 — ver a Seção 3 do README para o raciocínio
             completo.)
 
   Passo 2 — Extrai dois arrays gravados na memória (a partir do
@@ -64,9 +64,9 @@ for _nome in ("c.png", "m.png"):
 
 
 # -----------------------------------------------------------------
-# Constantes descobertas durante a análise (ver
-# docs/redescoberta-opcodes.md para o processo completo de como
-# esses números foram encontrados)
+# Constantes descobertas durante a engenharia reversa do bytecode.
+# Ver Seções 2 e 3 do README para o processo completo de como
+# esses números foram encontrados.
 # -----------------------------------------------------------------
 
 TAMANHO_DA_FLAG = 35                 # exigido por turt.py (`if len(flag) != 35`)
