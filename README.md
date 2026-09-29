@@ -124,7 +124,7 @@ Na área do canvas à esquerda, as quatro tartarugas ativas aparecem identificad
    - A tartaruga `(sTurt)` representa o **Stack Pointer (SP)**: ela avança para frente ao empilhar endereços de retorno em instruções `CALL` e recua em instruções `RET` e `DROP`. Entre os endereços 3 e 82 da pilha, o programa cria uma tabela de frequência para atestar que os 30 caracteres centrais da flag são todos diferentes entre si.
 
 5. **Ciclo de Instrução Visual:**
-   - Em vez de ler barramentos de fios de silício, a máquina consulta o canvas usando a função `find_overlapping(x, y, x, y)`. O movimento das quatro tartarugas coordena todo o fluxo de busca, decodificação, leitura de operandos e escrita dos resultados.
+   - A máquina consulta o canvas usando a função `find_overlapping(x, y, x, y)`. O movimento das quatro tartarugas coordena todo o fluxo de busca, decodificação, leitura de operandos e escrita dos resultados.
 
 ### 2.3 O mecanismo visual: `find_overlapping` e precedência de camadas
 
@@ -179,7 +179,7 @@ color0:
 
 O arquivo `turt.py` não traz comentários indicando qual cor representa cada comando. Para descobrir a semântica da máquina, foi necessário inspecionar a função `run()` e analisar o que o código executa em cada bloco condicional. A partir desse comportamento prático, demos nomes aos comandos por analogia com instruções assembly tradicionais.
 
-**Passo 1: isolar a estrutura de decisão.** A função `run()` lê a cor do primeiro pixel e aplica uma máscara de bits:
+**Passo 1: Isolar a estrutura de decisão.** A função `run()` lê a cor do primeiro pixel e aplica uma máscara de bits:
 
 ```python
 color0 = getColor(cTurt)
@@ -188,7 +188,7 @@ cmpcolor = (color0[0] & 0xfc, color0[1] & 0xfc, color0[2] & 0xfc)
 
 A cor mascarada (`cmpcolor`) isola os 6 bits superiores de cada canal RGB. Os 2 bits inferiores são descartados nesse momento para serem usados como flags de operando.
 
-**Passo 2: nomear cada operação pelo comportamento.** Para cada bloco condicional de `cmpcolor`, observamos a ação executada:
+**Passo 2: Nomear cada operação pelo comportamento.** Para cada bloco condicional de `cmpcolor`, observamos a ação executada:
 
 | Cor mascarada | Ação no código | Mnemônico escolhido | O que faz |
 |---|---|---|---|
@@ -216,7 +216,7 @@ else:
 
 Essa é a exata diferença entre ler o conteúdo de um endereço (`MOV`) e capturar o próprio endereço calculado (`LEA`).
 
-**Passo 3: decodificar as flags dos operandos.** Os 2 bits inferiores de cada canal de `color0` informam o formato dos operandos:
+**Passo 3:Decodificar as flags dos operandos.** Os 2 bits inferiores de cada canal de `color0` informam o formato dos operandos:
 
 ```python
 isR1 = color0[0] & 1 != 0    # bit 0 de R: primeiro operando é registrador?
@@ -227,7 +227,7 @@ isP2 = color0[1] & 2 != 0    # bit 1 de G: segundo operando é ponteiro?
 isC2 = color0[2] & 2 != 0    # bit 1 de B: segundo operando é constante?
 ```
 
-**Passo 4: o salto condicional e o salto incondicional.** Na instrução de salto `(220, 48, 96)`, os bits de `color0` selecionam quais condições disparam o deslocamento:
+**Passo 4: O salto condicional e o salto incondicional.** Na instrução de salto `(220, 48, 96)`, os bits de `color0` selecionam quais condições disparam o deslocamento:
 
 ```python
 e = readRVal(6)   # resultado igual da última comparação
@@ -434,11 +434,17 @@ $$
 
 ## 5. Teoria necessária
 
-- **Codificação de instruções em pixels:** usar bits de canais de cor para transportar informação combinada (opcode mais flags de operando) é análogo a como arquiteturas de processadores reais codificam registradores e modos de endereçamento dentro dos bits de uma mesma palavra de instrução.
-- **Busca binária como oráculo determinístico:** em vez de usar o algoritmo apenas para buscar dados em um array, usamos os resultados das comparações já gravadas para identificar quais caracteres pertencem à flag e onde se encontram. Cada comparação reduz o espaço pela metade, rodando em tempo linear $\mathcal{O}(|\Sigma| \cdot \log N)$, onde $|\Sigma|$ é o alfabeto testado e $N$ é o tamanho do vetor.
-- **Permutações:** o array de reordenação é uma bijeção de 30 posições, servindo como uma chave de transposição reversível.
-- **Linguagens esotéricas bidimensionais:** o funcionamento se assemelha a linguagens visuais como **Piet** e **Befunge**, onde as instruções e o fluxo de controle são direcionados pelas coordenadas espaciais em uma matriz visual.
+**Codificação de instruções em pixels:** 
+O código usa as cores dos pixels para representar instruções. Parte dos bits informa o que fazer (a operação) e outra parte informa como utilizar os dados (os operandos). Isso é semelhante ao funcionamento das instruções de um processador real.
 
+**Busca binária como oráculo determinístico:**
+A busca binária não é usada apenas para localizar um valor. Neste caso, os resultados das comparações ajudam a descobrir quais caracteres fazem parte da flag e suas respectivas posições. A cada comparação, metade das possibilidades é eliminada, tornando a busca mais eficiente. Em vez de usar o algoritmo apenas para buscar dados em um array, usamos os resultados das comparações já gravadas para identificar quais caracteres pertencem à flag e onde se encontram. Cada comparação reduz o espaço pela metade, rodando em tempo linear $\mathcal{O}(|\Sigma| \cdot \log N)$, onde $|\Sigma|$ é o alfabeto testado e $N$ é o tamanho do vetor.
+
+**Permutações:**
+O array define uma nova ordem para as 30 posições. Essa ordem funciona como uma chave de transposição, pois reorganiza os caracteres e pode ser desfeita para recuperar a sequência original.
+
+**Linguagens esotéricas bidimensionais:**
+O programa é organizado em uma estrutura visual, na qual a posição dos elementos influencia a execução. Assim como em linguagens como Piet e Befunge, as instruções e os caminhos que o programa percorre são definidos pelas posições em uma matriz.
 ---
 
 ## 6. Ambiente, dependências e decisão de reprodutibilidade
