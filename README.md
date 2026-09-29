@@ -169,7 +169,9 @@ color0:
 ```
 
 * **Constantes numéricas (24 bits):** cada pixel reúne três valores de 0 a 255 (Vermelho $B_0$, Verde $B_1$ e Azul $B_2$). O valor numérico é calculado na convenção **little-endian** (o byte de menor peso vem primeiro):
-  $$\text{Const} = B_0 + (B_1 \ll 8) + (B_2 \ll 16) \pmod{2^{24}}$$
+  $$
+  \text{Const} = B_0 + (B_1 \ll 8) + (B_2 \ll 16) \pmod{2^{24}}
+  $$
   Esse número é interpretado **com sinal**: se for maior ou igual à metade do limite máximo ($8.388.608$), ele representa um número negativo ($\text{Const} - 2^{24}$). Isso permite fazer saltos relativos para trás, viabilizando laços de repetição (loops).
 * **Registradores:** o índice do registrador de 0 a 8 é obtido por `(byte - 20) // 40`.
 * **Ponteiros (acesso indireto):** o endereço final é obtido por `reg_A + reg_B + offset`. Se a flag `isR` estiver ligada junto com `isP`, o acesso ocorre na **pilha** (`STACK[...]`). Caso contrário, ocorre na **memória global** (`MEM[...]`).
@@ -273,7 +275,9 @@ Zera um vetor de 80 posições na pilha (`STACK[3..82] = 0`). Esse vetor serve c
 
 **3. Validação do charset:**
 Percorre as posições de 4 a 33 (os 30 caracteres do miolo) e testa se cada caractere $c$ está no intervalo:
-$$43 \le c \le 122 \quad (\text{entre '+' e 'z' na tabela ASCII})$$
+$$
+43 \le c \le 122 \quad (\text{entre '+' e 'z' na tabela ASCII})
+$$
 
 **4. Verificação de unicidade:**
 Para cada caractere $c$, lê a célula `STACK[c - 43 + 3]`. Se o valor for diferente de zero, aciona `LOSE`. Se for zero, grava o valor `65025`. Isso prova que **todos os 30 caracteres do miolo precisam ser estritamente distintos**.
@@ -300,7 +304,9 @@ A Função 1 reordena os 30 caracteres internos da flag usando uma tabela gravad
 ```
 
 O efeito desse laço é reordenar os 30 bytes da flag em `MEM[35..64]` segundo a tabela fixa:
-$$\text{MEM}[35 + \text{perm}[i]] = \text{flag}[4 + i]$$
+$$
+\text{MEM}[35 + \text{perm}[i]] = \text{flag}[4 + i]
+$$
 
 ### 3.3 Função 2 (BinSearch): busca binária recursiva com oráculo
 
@@ -363,7 +369,9 @@ elif cmp_result == 4:
 
 Ao rodar esse processo para todos os valores de `tgt` entre 43 e 122, obtemos as 30 letras na ordem classificada:
 
-$$\text{sorted\_flag} = \texttt{"+-./01357:;AELTUWY\_adehilnrstw"}$$
+$$
+\text{sorted\_flag} = \texttt{"+-./01357:;AELTUWY\_adehilnrstw"}
+$$
 
 ### 4.3 Inversão da permutação e recomposição final
 
@@ -377,7 +385,10 @@ perm = [23, 14,  7, 18, 12,  1, 28, 15, 26,  0,
 
 Como a Função 1 gravou o caractere de posição original $i$ na posição `perm[i]` do buffer ordenado, para recuperar a flag original basta consultar o caractere ordenado correspondente:
 
-$$\text{flag\_original}[i] = \text{sorted\_flag}[\text{perm}[i]]$$
+
+$$
+\text{flag\_original}[i] = \text{sorted\_flag}[\text{perm}[i]]
+$$
 
 Mapeando cada índice:
 
@@ -416,7 +427,9 @@ Mapeando cada índice:
 
 Unindo o miolo ao envelope `CTF{...}`:
 
-$$\mathbf{CTF\{iT5\_E-tUr+1es/AlL.7h3\text{;}waY\text{:}d0Wn\}}$$
+$$
+\mathbf{CTF\{iT5\_E-tUr+1es/AlL.7h3\text{;}waY\text{:}d0Wn\}}
+$$
 
 ---
 
