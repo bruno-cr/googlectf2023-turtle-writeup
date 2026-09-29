@@ -435,7 +435,7 @@ $$\mathbf{CTF\{iT5\_E-tUr+1es/AlL.7h3\text{;}waY\text{:}d0Wn\}}$$
 
 O script original `turt.py` depende da biblioteca gráfica `turtle`, que por sua vez exige uma janela do Tkinter aberta. Em servidores e contêineres sem monitor, rodar o script original exigiria instalar e configurar o `Xvfb` (*X Virtual Framebuffer*).
 
-Para eliminar esse atrito e permitir testes instantâneos, desenvolvemos um **shim headless** (`solver/headless_turtle.py`): ele reimplementa os métodos da classe `Turtle` usando um dicionário em memória que mapeia coordenadas $(x, y)$ para cores, permitindo executar o arquivo original `turt.py` com apenas 3 linhas adaptadas (`solver/turt_headless.py`), mantendo 100% da lógica original.
+Para eliminar esse atrito e permitir testes instantâneos, desenvolvemos um **shim headless** (`solver/headless_turtle.py`): ele reimplementa estritamente o subconjunto da API de `turtle.Turtle()` utilizado pelo desafio (`forward`, `back`, `left`, `right`, `penup`, `pendown`, `pencolor`, `pos`, `speed`, `pensize`) usando um dicionário em memória que mapeia coordenadas $(x, y)$ para cores, permitindo executar o arquivo original `turt.py` com apenas 3 linhas adaptadas (`solver/turt_headless.py`), mantendo 100% da lógica original.
 
 ### 6.1 Verificação de integridade dos arquivos originais
 
@@ -475,7 +475,7 @@ googlectf2023-turtle-writeup/
 ## 8. Origem dos artefatos e adaptações do grupo
 
 - **`challenge/turt.py`, `challenge/c.png`, `challenge/m.png`:** baixados diretamente do repositório oficial do Google CTF 2023, mantidos intactos sem alteração de nenhum byte.
-- **`solver/headless_turtle.py`:** desenvolvido do zero pelo grupo para emular as chamadas da tartaruga com um dicionário de coordenadas em memória.
+- **`solver/headless_turtle.py`:** desenvolvido do zero pelo grupo para emular as chamadas da tartaruga com um dicionário de coordenadas em memória, cobrindo o subconjunto da API gráfica usado no desafio (`forward`, `back`, `left`, `right`, `penup`, `pendown`, `pencolor`, `pos`, `speed`, `pensize`).
 - **`solver/turt_headless.py`:** cópia fiel do interpretador original, trazendo apenas três adaptações documentadas no topo do arquivo: troca do módulo gráfico pelo shim, leitura de cor direta do dicionário e encapsulamento em função reutilizável.
 - **`solver/resolve_turtle.py`:** script principal de solução, que extrai a tabela de permutação, simula a busca binária sobre os dados de `m.png`, reconstrói a flag e a valida executando a VM de ponta a ponta.
 - **`solver/generate_hardware.py`:** script construído pelo grupo para renderizar e salvar o estado visual fiel da CPU em `hardware.png`.
