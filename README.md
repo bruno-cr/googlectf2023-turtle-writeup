@@ -3,22 +3,21 @@
 Write-up e reprodução do desafio **Turtle**, categoria Reverse Engineering do Google CTF 2023, desenvolvido como avaliação (E3) da disciplina **Segurança Cibernética (CCO-04.2.01)**, PPGCC, UFSCar.
 
 ## Membros do grupo
-
-- Thayná Marostica Machado da Silva
 - Bruno Camargo Ribeiro
 - Bruno Hiroki Nagao Anhaia
-- Gabriel Alves Moreira
-- Jonathan Choy Rivera
 - Cilene Renata Real
 - Emerson Hermann Lira dos Santos
+- Gabriel Alves Moreira
+- Jonathan Choy Rivera
 - Stephanie Maria Braga
-
+- Thayná Marostica Machado da Silva
 ---
 
 ## 1. Identificação do desafio e objetivo
 
-O desafio **Turtle** entrega três arquivos originais:
+Ao executar o arquivo turt.py fornecido, o programa lê um arquivo de "código" disfarçado ou gerado como imagem (c.png). O comportamento visual da tartaruga na tela representa a execução de instruções de uma máquina virtual (VM). Cada movimento ou estado da tartaruga corresponde a uma operação específica na memória ou nos registradores dessa arquitetura fictícia.
 
+O desafio **Turtle** entrega três arquivos originais:
 - `turt.py`: um script em Python que utiliza a biblioteca gráfica **Turtle** e a tela de desenho (canvas) do Tkinter de um modo incomum, onde a tartaruga atua diretamente como uma **CPU**.
 - `c.png`: uma imagem de **9 x 83 pixels** que codifica o **código** do programa, onde cada trinca de pixels em uma linha representa uma instrução.
 - `m.png`: uma imagem de **25 x 21 pixels** que codifica a **memória inicial** da máquina, contendo a tabela de permutação e os resultados esperados das comparações.
