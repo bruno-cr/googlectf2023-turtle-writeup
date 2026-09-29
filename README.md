@@ -593,3 +593,7 @@ Os pontos que comprovam a correção da solução:
 - YEN, B. **GoogleCTF 2023 Writeup, Turtle Section**. Disponível em: <https://ctftime.org/writeup/37339>. Acesso em: 27 set. 2026.
 - PYTHON SOFTWARE FOUNDATION. **Turtle Graphics Documentation (Python 3.13)**. Disponível em: <https://docs.python.org/3/library/turtle.html>. Acesso em: 27 set. 2026.
 - TKINTER AUTHORS. **Tkinter Canvas Widget Documentation**. Disponível em: <https://tkdocs.com/shipman/canvas.html>. Acesso em: 27 set. 2026.
+
+## 13. Apresentação em slides
+
+- https://canva.link/ih26ipnpjorxrtq
