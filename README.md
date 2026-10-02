@@ -369,7 +369,7 @@ elif cmp_result == 4:
 Ao rodar esse processo para todos os valores de `tgt` entre 43 e 122, obtemos as 30 letras na ordem classificada:
 
 $$
-\text{sorted\_flag} = \texttt{"+-./01357:;AELTUWY\_adehilnrstw"}
+\text{sorted\\_flag} = \texttt{"+-./01357:;AELTUWY\\_adehilnrstw"}
 $$
 
 ### 4.3 Inversão da permutação e recomposição final
@@ -386,7 +386,7 @@ Como a Função 1 gravou o caractere de posição original $i$ na posição `per
 
 
 $$
-\text{flag\_original}[i] = \text{sorted\_flag}[\text{perm}[i]]
+\text{flag\\_original}[i] = \text{sorted\\_flag}[\text{perm}[i]]
 $$
 
 Mapeando cada índice:
